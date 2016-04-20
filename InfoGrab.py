@@ -2,27 +2,15 @@ import requests
 from bs4 import BeautifulSoup
 import time
 
-import os
+def set_server(server,domain):
+    # Generate new URL
+    url = 'http://' + server + '.travian.' + domain + '/'
+    return url
 
-# def scan():
-#
-#     print(os.getcwd())
-#
-#     with open('dorf1.php', 'r', encoding='UTF-8') as f:
-#         data = f.read()
-#
-#     soup = BeautifulSoup(data, "lxml")
-#     print(soup.prettify())
-#
-#
-#
-#
-# scan()
-
-def login(page, server, domain, username, password):
+def login(page, server, username, password):
 
     # Generate new URL
-    url = 'http://' + server + '.travian.' + domain + '/' + page
+    url = server + '/' + page
 
     # Open session & add user agent
     s = requests.session()
@@ -32,7 +20,15 @@ def login(page, server, domain, username, password):
     login_data = dict(name=username, password=password, s1='Einloggen', login=time.time())
     # Send login data to login page
     s.post(url, data=login_data)
-    # get page after login
-    r = s.get(url)
+    # return session
+    return s
 
-login('dorf1.php', 'ts3', 'de', 'Synticus', 'travianpw')
+def get_page(server, page, session):
+    text = session.get(server + '/' + page)
+
+
+
+server = set_server('ts3', 'de')
+session = login('dorf1.php', server, 'Synticus', 'travianpw')
+text = session.get(server + '/' + 'dorf1.php')
+print(text.content)
