@@ -74,13 +74,42 @@ def get_dorf1(session, server):
 
         #New Subsoup for level
         subsoup = BeautifulSoup(hit.get('title'), 'lxml')
+
         #Cut to only relevant String
         result = subsoup.find(class_="level")
         print(result.string)
+
+        # Stop after 18 Fields
         if currentfield == 19:
             break
+
+def get_dorf2(session, server):
+    # grab dorf2.php
+    text = session.get(server + '/' + 'dorf2.php')
+    # Into BS
+    soup = BeautifulSoup(text.content, 'lxml')
+
+    # Map Resource Fields + Levels
+
+    for hit in soup.find_all('area'):
+        # Get field ID
+        print('Field ID: ' + hit.get('href').split('=')[1])
+        # Get Name of building
+        print(hit.get('alt').split(' ')[0])
+
+        # Get Level of building
+        # New Subsoup for level
+        subsoup = BeautifulSoup(hit.get('alt'), 'lxml')
+        # Cut to only relevant String
+        result = subsoup.find(class_="level")
+
+        try:
+            print(result.string)
+        except:
+            continue
 
 
 server = set_server('ts3', 'de')
 session = login('dorf1.php', server, 'Synticus', 'travianpw')
 get_dorf1(session, server)
+get_dorf2(session, server)
