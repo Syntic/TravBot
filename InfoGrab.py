@@ -2,6 +2,9 @@ import requests
 from bs4 import BeautifulSoup
 import time
 import re
+import Database
+import sys
+
 
 def set_server(server,domain):
     # Generate new URL
@@ -53,35 +56,49 @@ def get_dorf1(session, server):
     #Map Resource Fields + Levels
 
     currentfield = 1
+    restype = ''
 
     for hit in soup.find_all('area'):
 
         if "Holzfäller" in hit.get('title'):
-            print('ID', currentfield, 'Holz')
-            currentfield += 1
+            restype = 'Holz'
 
         if "Getreidefarm" in hit.get('title'):
-            print('ID', currentfield, 'Getreide')
-            currentfield += 1
+            restype = 'Getreide'
 
         if "Eisenmine" in hit.get('title'):
-            print('ID', currentfield, 'Eisen')
-            currentfield += 1
+            restype = 'Eisen'
 
         if "Lehmgrube" in hit.get('title'):
-            print('ID', currentfield, 'Lehm')
-            currentfield += 1
+            restype = 'Lehm'
 
-        #New Subsoup for level
+        # New Subsoup for level
         subsoup = BeautifulSoup(hit.get('title'), 'lxml')
 
-        #Cut to only relevant String
-        result = subsoup.find(class_="level")
-        print(result.string)
+        # Cut to only relevant String and save as int in reslevel
+        levelstr = subsoup.find(class_="level")
+        reslevel = int(levelstr.string.split(" ")[1])
+
+        # Set Update Scheme
+
+        sql = """
+        UPDATE fieldmap
+        SET buildtype = ?, buildlevel = ?
+        WHERE rowid = ?
+        """
+
+        # Execute Update
+        Database.cursor.execute(sql, (restype, reslevel, currentfield))
+
+        # Advance ID
+        currentfield += 1
 
         # Stop after 18 Fields
         if currentfield == 19:
             break
+
+    # Commit to Database
+    Database.conn.commit()
 
 def get_dorf2(session, server):
     # grab dorf2.php
@@ -90,71 +107,44 @@ def get_dorf2(session, server):
     soup = BeautifulSoup(text.content, 'lxml')
 
     # Map Resource Fields + Levels
-
     for hit in soup.find_all('area'):
         # Get field ID
-        print('Field ID: ' + hit.get('href').split('=')[1])
+        field_id = int(hit.get('href').split('=')[1])
+
         # Get Name of building
-        print(hit.get('alt').split(' ')[0])
+        building_type = hit.get('alt').split(' ')[0]
 
         # Get Level of building
         # New Subsoup for level
         subsoup = BeautifulSoup(hit.get('alt'), 'lxml')
         # Cut to only relevant String
-        result = subsoup.find(class_="level")
+        building_level = subsoup.find(class_="level")
 
-        try:
-            print(result.string)
-        except:
-            continue
-        
-        
-        
-#looks for timer=0:00:00 and puts silver price in an output .csv file
-def get_auctions(server, session, minutes):
+        if building_level is not None:
+            building_level = int(building_level.string.split(" ")[1])
 
-    #set endtime for timer of function
-    t_end = time.time() + 60 * minutes
+        # Set Update Scheme
 
-    #open output file
-    f = open('output.csv', 'a', encoding='utf-8')
-    
-    while (time.time() < t_end):    
-        url = server + 'hero_auction.php'
-        text = session.get(url)
-        auction_soup = BeautifulSoup(text.content, "html.parser")
-        type(auction_soup)
+        sql = """
+        UPDATE fieldmap
+        SET buildtype = ?, buildlevel = ?
+        WHERE rowid = ?
+        """
 
-        table = auction_soup.find('table')
+        # Execute Update
+        Database.cursor.execute(sql, (building_type, building_level, field_id))
 
-        name = ''
-        silver = ''
-        timer = ''
+    # Commit to Database
+    Database.conn.commit()
 
-        #search table for tr and td tags
-        for row in table.findAll('tr'):
-            cells = row.findAll('td')
-            timer_element = row.find('span' , { 'class' : 'c0 t' })
-            if (timer_element != None):
-                #For each "tr", assign each "td" to a variable.
-                if len(cells) == 6:
-                    name = str(cells[1].find(text=True))
-                    silver = str(cells[3].findAll(text=True))
-                    silver = silver[:-8][10:]
-                    timer = str(cells[4].find(text=True))
-                     
-                    write_to_file = name + ";" + silver + ";" + timer + "\n"
-                    print(write_to_file)
-                    f.write(write_to_file)
-                    
-        #timeout to prevent identical entries - 5 seconds             
-        time.sleep(5)
-        
-    #close file
-    f.close()
+start = time.time()
 
 server = set_server('ts3', 'de')
-session = login('dorf1.php', server, 'Synticus', 'travianpw')
-get_dorf1(session, server)
-get_dorf2(session, server)
-#get_auctions(server, session, 1)
+session = login('dorf1.php', server, 'Syntic', 'hacker1992')
+
+Database.initialize_database()
+
+# get_dorf1(session, server)
+# get_dorf2(session, server)
+print('Field ID Map:')
+Database.print_database()
