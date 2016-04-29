@@ -140,7 +140,7 @@ def get_dorf2(session, server):
 start = time.time()
 
 server = set_server('ts3', 'de')
-session = login('dorf1.php', server, 'Syntic', 'hacker1992')
+session = login('dorf1.php', server, 'Synticus', 'travianpw')
 
 Database.initialize_database()
 
